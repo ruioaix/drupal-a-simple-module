@@ -11,7 +11,9 @@
  * 		3,block view.
  */
 
-//hook_help
+/**
+ * Implements hook_help().
+ */
 function navg_onepage_help($path,$arg) {
   switch ($path) {
     case "admin/help#navg_onepage":
@@ -20,7 +22,9 @@ function navg_onepage_help($path,$arg) {
   }
 }
 
-//hook_permission()
+/**
+ * Implements hook_permission().
+ */
 function navg_onepage_permission() {
   return array(
     'access navg_onepage content' => array(
@@ -29,9 +33,12 @@ function navg_onepage_permission() {
     );
 }
 
-//hook_menu
-//the first path'callback function is _navg_onepage_page().
-//the second path'callback function is drupal_get_form(),the related form is navg_configure_form.
+/**
+ * Implements hook_menu().
+ *
+ * the first path'callback function is _navg_onepage_page().
+ * the second path'callback function is drupal_get_form(),the related form is navg_configure_form.
+ */
 function navg_onepage_menu() {
   $items = array();  
   $items['navg_onepage/onepage'] = array(
@@ -51,7 +58,9 @@ function navg_onepage_menu() {
   return $items;
 }
 
-//this is the form for configure page.
+/**
+ * Form constructor for the configure page.
+ */
 function navg_configure_form($form, &$form_state) {
 	$form['navg_onepage_max'] = array(
 		'#type' => 'textfield',
@@ -65,8 +74,11 @@ function navg_configure_form($form, &$form_state) {
 	return system_settings_form($form);
 }
 
-//a function used in the form.
-//Use Database API to retrieve the content in naonepage table.
+/**
+ * a function used in the form.
+ *
+ * Use Database API to retrieve the content in naonepage table.
+ */
 function navg_onepage_getcontents($nnum) {
   $max_num = variable_get('navg_onepage_max',8);	
   $query = db_select('naonepage', 'n')
@@ -80,8 +92,11 @@ function navg_onepage_getcontents($nnum) {
   return $query->execute(); 
 }
 
-//a function used in the form.
-//theme the database'result.
+/**
+ * a function used in the form.
+ *
+ * theme the database'result.
+ */
 function navg_onepage_inoutcontents() {
   $result = navg_onepage_getcontents('page');
   //Array to contain items for the page to render.
@@ -92,7 +107,8 @@ function navg_onepage_inoutcontents() {
     'data' => $nao->name.'---'.$nao->a,
     ); 
   }
-  if (empty($items)) { //No content in the last week.
+  if (empty($items)) { 
+    //No content in the last week.
     $page_array = t('No posts available.');
   }
   else {
@@ -106,8 +122,11 @@ function navg_onepage_inoutcontents() {
   return $page_array; 
 }
 
-//hook_form
-//this is the navigation page's form. 
+/**
+ * Implements hook_form().
+ *
+ * this is the navigation page's form. 
+ */
 function navg_onepage_form() {
   $form = array();
   $form['pager'] = array(
@@ -138,7 +157,9 @@ function navg_onepage_form() {
   return $form;
 }
 
-//validate the input,the name must be different.
+/**
+ * validate the input,the name must be different.
+ */
 function navg_onepage_form_validate($form,$form_state) {
   $result = navg_onepage_getcontents('page');
   $navg_name = $form_state['values']['navg_onepage_textname'];
@@ -150,16 +171,21 @@ function navg_onepage_form_validate($form,$form_state) {
   }
 }
 
-//ajax callback.
+/**
+ * ajax callback.
+ */
 function navg_onepage_form_callback($form,$form_state) {
 	return navg_onepage_inoutcontents(); //this give a lot of enlighten.
 }
 
-//form submit.
+/**
+ * form submit.
+ */
 function navg_onepage_form_submit($form,&$form_state) {
   $ncontent = $form_state['values']['navg_onepage_maintext'];
   $nname = $form_state['values']['navg_onepage_textname'];
-  $query = db_insert('naonepage')   //use db_insert,insert the name and content into the naonepage table.
+  //use db_insert,insert the name and content into the naonepage table.
+  $query = db_insert('naonepage')   
     ->fields(array(
       'a' => $ncontent,
       'name' => $nname,
@@ -167,15 +193,22 @@ function navg_onepage_form_submit($form,&$form_state) {
     ->execute();
 }
 
-//block info and block view.
+/**
+ * block info and block view.
+ */
 function navg_onepage_block_info() {
   $blocks['navg_onepage'] = array(
-    'info' => t('Navigation onepage'), //The name that will appear in the block list.
-    'cache' => DRUPAL_CACHE_PER_ROLE, //Default
+    //The name that will appear in the block list.
+    'info' => t('Navigation onepage'), 
+    //Default
+    'cache' => DRUPAL_CACHE_PER_ROLE, 
   );
   return $blocks;
 }
 
+/**
+ * block_view().
+ */
 function navg_onepage_block_view($delta = '') {
   switch($delta){
     case 'navg_onepage':
@@ -192,7 +225,8 @@ function navg_onepage_block_view($delta = '') {
           ); 
         }
       
-        if (empty($items)) { //No content in the last week.
+        if (empty($items)) { 
+          //No content in the last week.
           $block['content'] = t('No posts available.');  
         } 
         else {
@@ -205,49 +239,82 @@ function navg_onepage_block_view($delta = '') {
   return $block;
 }
 
-//hook_menu callback function.
+
+/**
+ * hook_menu callback function.
+ */
 function n_navg_onepage_page() {
   drupal_add_css(drupal_get_path('module', 'navg_onepage') . '/navg_onepage.css');
-	$kk = drupal_get_form('navg_onepage_form');
-	$output = drupal_render($kk);
-	return $output;
+  $kk = drupal_get_form('navg_onepage_form');
+  $output = drupal_render($kk);
+  return $output;
 }
 
+/**
+ * Implements hook_patterns()
+ */
 function navg_onepage_patterns() {
-	//must
+  //must
   $actions['navgcfg'] = array('descr' => t('Configure navg_onepage post number'), 
     PATTERNS_MODIFY => array('navg_configure_form'),
   );
   return $actions;
 }
 
+/**
+ * Implements hook_patterns_prepare().
+ */
 function navg_onepage_patterns_prepare($action, $tag, &$data = NULL) {
-	return patterns_results();
+  return patterns_results();
 }
 
+/**
+ * Implements hook_patterns_validate().
+ */
 function navg_onepage_patterns_validate($action, $tag, &$data = NULL) {
-	return patterns_results();
+  return patterns_results();
 }
 
+/**
+ * Implements hook_patterns_callbacks().
+ */
 function navg_onepage_patterns_callbacks($action, $tag, &$data = NULL) {
 	//must
-	$result =  array(
-		'navg_configure_form',
-	);
-	return patterns_results(PATTERNS_SUCCESS, t('Execution successful'), $result);
+  $result =  array(
+  	//'navg_modify',//navg_modify() works fine.
+    'navg_configure_form'
+  );
+  return patterns_results(PATTERNS_SUCCESS, t('Execution successful'), $result);
 }
 
+/**
+ * function navg_modify() 
+ *
+ * use to callback without submit form.
+ */
+//function navg_modify($action,&$data) {
+//  variable_set('navg_onepage_max',$data['navg_onepage_max']);
+//}
+  
+/**
+ * Implements hook_patterns_build().
+ */
 function navg_onepage_patterns_build($action, $form_id, &$data = NULL, &$a) {
-	variable_set('navg_onepage_max',$data['numrui']);
-	//must
-	return patterns_results(PATTERNS_SUCCESS, t('Execution successful'), NULL);
+	drupal_get_form($from_id);
+  return patterns_results(PATTERNS_SUCCESS, t('Execution successful'), NULL);
 }
 
+/**
+ * Implements hook_patterns_params().
+ */
 function navg_onepage_patterns_params($action, $form_id, &$data = NULL, &$a) {
-	return patterns_results();
+  return patterns_results();
 }
 
+/**
+ * Implements hook_patterns_cleanup().
+ */
 function navg_onepage_patterns_cleanup($action, $tag, &$data = NULL) {
-	return patterns_results();
+  return patterns_results();
 }
 

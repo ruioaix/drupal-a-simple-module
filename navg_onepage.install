@@ -1,4 +1,8 @@
 <?php
+/**
+ * @file
+ * Install, uninstall functions for the navg_onepage module
+ */
 function navg_onepage_install() {
   
 }
