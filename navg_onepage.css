@@ -1,0 +1,23 @@
+.form-item-navg-onepage-maintext {
+	float:left;
+	padding-left: 2px;
+}
+
+.form-item-navg-onepage-textname {
+	float: left;
+	padding-left:40px;
+}
+
+#nitem-list ul li {
+  border:2px solid #def;
+}
+
+#navg-onepage-form .form-submit{
+  margin-top: 20px;
+  margin-left: 20px;
+}
+/*
+.content {
+  padding-top:20px;
+}
+

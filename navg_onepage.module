@@ -1,0 +1,253 @@
+<?php
+/*
+ * @file
+ * a module for practise.
+ *
+ * the module'name is navg_onepage.
+ * there are three parts:
+ * 		1,hook_help.
+ * 		2,hook_menu.
+ * 			two path: one is on the Navigation.the other is a configure page.
+ * 		3,block view.
+ */
+
+//hook_help
+function navg_onepage_help($path,$arg) {
+  switch ($path) {
+    case "admin/help#navg_onepage":
+      return '<p>'.t("help for navg_onepage module").'<p>';
+      break;
+  }
+}
+
+//hook_permission()
+function navg_onepage_permission() {
+  return array(
+    'access navg_onepage content' => array(
+      'title' => t('Access content for the navg_onepage module'),
+      )
+    );
+}
+
+//hook_menu
+//the first path'callback function is _navg_onepage_page().
+//the second path'callback function is drupal_get_form(),the related form is navg_configure_form.
+function navg_onepage_menu() {
+  $items = array();  
+  $items['navg_onepage/onepage'] = array(
+    'title' => 'Navigation onepage',
+    'page callback' => 'n_navg_onepage_page',
+    'access arguments' => array('access navg_onepage content'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['admin/config/navg_onepage'] = array(
+	  'title' => 'Navg onepage',
+	  'description' => 'Configuration for navg_onepage module',
+	  'page callback' => 'drupal_get_form',
+	  'page arguments' => array('navg_configure_form'),
+	  'access arguments' => array('access administration pages'),
+	  'type' => MENU_NORMAL_ITEM,
+  );
+  return $items;
+}
+
+//this is the form for configure page.
+function navg_configure_form($form, &$form_state) {
+	$form['navg_onepage_max'] = array(
+		'#type' => 'textfield',
+		'#title' => t('Maximum number of items'),
+		'#default_value' => variable_get('navg_onepage_max',8),//the variable'name and the element'name must be same.
+		'#size' => 3,
+		'#maxlength' => 4,
+		'#description' => t('The maximum number of items to display'),
+		'#required' => TRUE,
+	);
+	return system_settings_form($form);
+}
+
+//a function used in the form.
+//Use Database API to retrieve the content in naonepage table.
+function navg_onepage_getcontents($nnum) {
+  $max_num = variable_get('navg_onepage_max',8);	
+  $query = db_select('naonepage', 'n')
+    ->fields('n', array('a', 'pid', 'name'))
+    ->orderBy('pid', 'DESC'); //use pid,the last item's pid is the biggest.
+  if($nnum == 'block') {
+    $query->range(0,5);   //for block,show 5 items.
+  }
+  if($nnum == 'page')
+	$query->range(0,$max_num);
+  return $query->execute(); 
+}
+
+//a function used in the form.
+//theme the database'result.
+function navg_onepage_inoutcontents() {
+  $result = navg_onepage_getcontents('page');
+  //Array to contain items for the page to render.
+  $items = array();
+  //Iterate over the resultset and format.
+  foreach ($result as $nao) {
+    $items[] = array(
+    'data' => $nao->name.'---'.$nao->a,
+    ); 
+  }
+  if (empty($items)) { //No content in the last week.
+    $page_array = t('No posts available.');
+  }
+  else {
+    $page_array = theme('item_list',array(
+      'items' => $items,
+      'attributes' => array (
+        'id' => 'list2update'
+      ),
+    ));
+  }
+  return $page_array; 
+}
+
+//hook_form
+//this is the navigation page's form. 
+function navg_onepage_form() {
+  $form = array();
+  $form['pager'] = array(
+	  '#prefix' => '<div id="nitem-list">',
+	  '#markup' => navg_onepage_inoutcontents(),
+	  '#suffix' => '</div>',
+  );
+  $form['navg_onepage_textname'] = array(
+    '#type' => 'textfield',
+    '#title' => t('title'),
+    '#size' => 10,
+    '#required' => TRUE,
+  );
+  $form['navg_onepage_maintext'] = array(
+    '#type' => 'textfield',
+    '#title' => t('content'),
+    '#size' => 35,
+    '#required' => TRUE,
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+  	'#ajax' => array(  
+  		'callback' => 'navg_onepage_form_callback',
+  		'wrapper' => 'list2update',
+  	),
+  );
+  return $form;
+}
+
+//validate the input,the name must be different.
+function navg_onepage_form_validate($form,$form_state) {
+  $result = navg_onepage_getcontents('page');
+  $navg_name = $form_state['values']['navg_onepage_textname'];
+  //Iterate over the resultset and format.
+  foreach ($result as $nao) {
+  	if($navg_name == $nao->name) {
+        form_set_error('xxxx',t('the name is already in the database,please change one.'));
+  	}
+  }
+}
+
+//ajax callback.
+function navg_onepage_form_callback($form,$form_state) {
+	return navg_onepage_inoutcontents(); //this give a lot of enlighten.
+}
+
+//form submit.
+function navg_onepage_form_submit($form,&$form_state) {
+  $ncontent = $form_state['values']['navg_onepage_maintext'];
+  $nname = $form_state['values']['navg_onepage_textname'];
+  $query = db_insert('naonepage')   //use db_insert,insert the name and content into the naonepage table.
+    ->fields(array(
+      'a' => $ncontent,
+      'name' => $nname,
+    ))
+    ->execute();
+}
+
+//block info and block view.
+function navg_onepage_block_info() {
+  $blocks['navg_onepage'] = array(
+    'info' => t('Navigation onepage'), //The name that will appear in the block list.
+    'cache' => DRUPAL_CACHE_PER_ROLE, //Default
+  );
+  return $blocks;
+}
+
+function navg_onepage_block_view($delta = '') {
+  switch($delta){
+    case 'navg_onepage':
+      $block['subject'] = t('Navigation onepage');
+      if(user_access('access content')){
+        //Use our custom function to retrieve data.
+        $result = navg_onepage_getcontents('block');
+        //Array to contain items for the block to render.
+        $items = array();
+        //Iterate over the resultset and format  
+        foreach ($result as $node){
+          $items[] = array(
+            'data' => $node->name.':'.$node->a,
+          ); 
+        }
+      
+        if (empty($items)) { //No content in the last week.
+          $block['content'] = t('No posts available.');  
+        } 
+        else {
+          //Pass data through theme function.
+          $block['content'] = theme('item_list', array(
+            'items' => $items));
+        }
+      }
+  }
+  return $block;
+}
+
+//hook_menu callback function.
+function n_navg_onepage_page() {
+  drupal_add_css(drupal_get_path('module', 'navg_onepage') . '/navg_onepage.css');
+	$kk = drupal_get_form('navg_onepage_form');
+	$output = drupal_render($kk);
+	return $output;
+}
+
+function navg_onepage_patterns() {
+	//must
+  $actions['navgcfg'] = array('descr' => t('Configure navg_onepage post number'), 
+    PATTERNS_MODIFY => array('navg_configure_form'),
+  );
+  return $actions;
+}
+
+function navg_onepage_patterns_prepare($action, $tag, &$data = NULL) {
+	return patterns_results();
+}
+
+function navg_onepage_patterns_validate($action, $tag, &$data = NULL) {
+	return patterns_results();
+}
+
+function navg_onepage_patterns_callbacks($action, $tag, &$data = NULL) {
+	//must
+	$result =  array(
+		'navg_configure_form',
+	);
+	return patterns_results(PATTERNS_SUCCESS, t('Execution successful'), $result);
+}
+
+function navg_onepage_patterns_build($action, $form_id, &$data = NULL, &$a) {
+	variable_set('navg_onepage_max',$data['numrui']);
+	//must
+	return patterns_results(PATTERNS_SUCCESS, t('Execution successful'), NULL);
+}
+
+function navg_onepage_patterns_params($action, $form_id, &$data = NULL, &$a) {
+	return patterns_results();
+}
+
+function navg_onepage_patterns_cleanup($action, $tag, &$data = NULL) {
+	return patterns_results();
+}
+

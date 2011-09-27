@@ -1,0 +1,5 @@
+name = Navigation onepage
+description = A module from China-term,for practise.
+configure = admin/config/navg_onepage
+
+core = 7.x
