@@ -10,6 +10,6 @@ info:
   author_email: xrfind@gmail.com
 
 actions:
-  modify: 
-    tag: navgcfg
-    navg_onepage_max: 4
+  - modify: 
+      tag: navgcfg
+      navg_onepage_max: 4
